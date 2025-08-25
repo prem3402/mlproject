@@ -5,6 +5,7 @@ import sys
 import pickle
 
 from sklearn.metrics import r2_score
+from sklearn.model_selection import GridSearchCV
 
 
 def save_pickle(file_path, obj):
@@ -18,16 +19,21 @@ def save_pickle(file_path, obj):
         raise CustomException(e, sys)
 
 
-def evaluate_model(X_train, y_train, X_test, y_test, models):
+def evaluate_model(X_train, y_train, X_test, y_test, models, params):
     try:
         report = {}
-        for name, model in models.items():
+        for model_name, model in models.items():
+            param_grid = params.get(model_name)
+            if param_grid:
+                gs = GridSearchCV(model, param_grid, cv=3)
+                gs.fit(X_train, y_train)
+                model.set_params(**gs.best_params_)
             model.fit(X_train, y_train)
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
             train_model_score = r2_score(y_train, y_train_pred)
             test_model_score = r2_score(y_test, y_test_pred)
-            report[name] = test_model_score
+            report[model_name] = test_model_score
         return report
 
     except Exception as e:
